@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ SYNC DISPLAY</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+:root {
+–bg: #080a0d;
+–panel: #0b0f14;
+–border: #161f2b;
+–accent: #00e5ff;
+–accent2: #ff3d71;
+–accent3: #ffe600;
+–green: #00ff88;
+–text: #c8d6e5;
+–dim: #3d5166;
+}
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: ‘Share Tech Mono’, monospace;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background: repeating-linear-gradient(
+0deg, transparent, transparent 3px,
+rgba(0,229,255,0.012) 3px, rgba(0,229,255,0.012) 4px
+);
+pointer-events: none;
+z-index: 999;
+}
+
+/* FLASH OVERLAY on transition */
+.flash-overlay {
+position: fixed;
+inset: 0;
+background: rgba(0,229,255,0.08);
+pointer-events: none;
+z-index: 998;
+opacity: 0;
+transition: opacity 0.1s;
+}
+.flash-overlay.active { opacity: 1; }
+
+/* HEADER */
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 12px 24px;
+border-bottom: 1px solid var(–border);
+background: var(–panel);
+}
+
+.logo {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 22px;
+letter-spacing: 4px;
+color: var(–dim);
+}
+
+.logo span { color: var(–accent); }
+
+.sync-indicator {
+display: flex;
+align-items: center;
+gap: 10px;
+font-size: 11px;
+}
+
+.sync-dot {
+width: 8px; height: 8px;
+border-radius: 50%;
+background: var(–accent2);
+box-shadow: 0 0 8px var(–accent2);
+}
+.sync-dot.synced {
+background: var(–green);
+box-shadow: 0 0 10px var(–green);
+animation: syncPulse 0.6s ease;
+}
+
+@keyframes syncPulse {
+0% { transform: scale(1); }
+50% { transform: scale(1.8); }
+100% { transform: scale(1); }
+}
+
+.role-badge {
+padding: 4px 12px;
+border: 1px solid var(–accent2);
+color: var(–accent2);
+font-size: 10px;
+letter-spacing: 3px;
+}
+
+/* PROGRESS */
+.progress-bar {
+height: 3px;
+background: var(–border);
+}
+.progress-fill {
+height: 100%;
+background: linear-gradient(90deg, var(–accent), var(–green));
+box-shadow: 0 0 10px var(–accent);
+transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* MAIN DASHBOARD */
+.dashboard {
+flex: 1;
+display: grid;
+grid-template-columns: 1fr 1fr 1fr;
+grid-template-rows: auto 1fr auto;
+gap: 1px;
+background: var(–border);
+overflow: hidden;
+}
+
+.cell {
+background: var(–bg);
+padding: 24px;
+display: flex;
+flex-direction: column;
+gap: 12px;
+position: relative;
+overflow: hidden;
+}
+
+/* HERO CELL */
+.cell-hero {
+grid-column: 1 / 3;
+background: var(–panel);
+justify-content: center;
+align-items: flex-start;
+padding: 40px;
+}
+
+.cell-hero::after {
+content: ‘’;
+position: absolute;
+right: -40px; top: -40px;
+width: 200px; height: 200px;
+border-radius: 50%;
+background: radial-gradient(circle, rgba(0,229,255,0.06), transparent 70%);
+pointer-events: none;
+}
+
+.step-badge {
+font-size: 10px;
+letter-spacing: 4px;
+color: var(–accent);
+margin-bottom: 8px;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.step-badge::before {
+content: ‘’;
+width: 20px; height: 1px;
+background: var(–accent);
+box-shadow: 0 0 6px var(–accent);
+}
+
+.slide-title {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 64px;
+line-height: 1;
+color: #fff;
+letter-spacing: 2px;
+transition: all 0.3s ease;
+}
+
+.slide-sub {
+font-size: 13px;
+color: var(–dim);
+margin-top: 12px;
+letter-spacing: 1px;
+}
+
+/* STEP NUMBER CELL */
+.cell-stepnum {
+background: rgba(0,229,255,0.04);
+border-left: 1px solid var(–accent);
+justify-content: center;
+align-items: center;
+text-align: center;
+}
+
+.big-num {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 100px;
+line-height: 1;
+color: var(–accent);
+text-shadow: 0 0 60px rgba(0,229,255,0.3);
+}
+
+.big-num-label { font-size: 10px; letter-spacing: 4px; color: var(–dim); }
+
+/* METRICS ROW */
+.cell-metric {
+background: var(–panel);
+}
+
+.metric-label {
+font-size: 10px;
+letter-spacing: 3px;
+color: var(–dim);
+}
+
+.metric-value {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 42px;
+color: var(–text);
+transition: all 0.3s ease;
+}
+
+.metric-value.up { color: var(–green); }
+.metric-value.down { color: var(–accent2); }
+
+.metric-change {
+font-size: 10px;
+display: flex;
+align-items: center;
+gap: 6px;
+}
+.metric-change.pos { color: var(–green); }
+.metric-change.neg { color: var(–accent2); }
+
+/* MINI CHART */
+.mini-chart {
+flex: 1;
+display: flex;
+align-items: flex-end;
+gap: 3px;
+}
+
+.bar {
+flex: 1;
+background: var(–border);
+transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s;
+min-height: 4px;
+}
+
+.bar.active-bar { background: var(–accent); box-shadow: 0 0 6px var(–accent); }
+.bar.high { background: var(–green); }
+
+/* NOTES CELL */
+.cell-notes {
+grid-column: 1 / 2;
+background: var(–panel);
+}
+
+.note-list { display: flex; flex-direction: column; gap: 8px; }
+
+.note-item {
+display: flex;
+align-items: flex-start;
+gap: 10px;
+font-size: 11px;
+color: var(–dim);
+transition: color 0.3s;
+}
+
+.note-item.highlight { color: var(–text); }
+
+.note-dot {
+width: 5px; height: 5px;
+border-radius: 50%;
+background: var(–dim);
+margin-top: 4px;
+flex-shrink: 0;
+transition: background 0.3s;
+}
+
+.note-item.highlight .note-dot {
+background: var(–accent);
+box-shadow: 0 0 6px var(–accent);
+}
+
+/* TIMELINE MINI */
+.cell-timeline {
+grid-column: 2 / 4;
+background: var(–panel);
+}
+
+.mini-timeline {
+display: flex;
+gap: 4px;
+align-items: center;
+flex-wrap: wrap;
+}
+
+.mini-step {
+padding: 5px 10px;
+border: 1px solid var(–border);
+font-size: 9px;
+letter-spacing: 1px;
+color: var(–dim);
+transition: all 0.3s;
+white-space: nowrap;
+}
+
+.mini-step.done { border-color: var(–dim); color: var(–dim); opacity: 0.4; }
+.mini-step.current {
+border-color: var(–accent);
+color: var(–accent);
+background: rgba(0,229,255,0.08);
+box-shadow: 0 0 10px rgba(0,229,255,0.15);
+}
+
+/* CELL LABEL */
+.cell-label {
+font-size: 9px;
+letter-spacing: 3px;
+color: var(–dim);
+text-transform: uppercase;
+}
+
+/* WAITING STATE */
+.waiting {
+position: fixed;
+inset: 0;
+background: var(–bg);
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+gap: 20px;
+z-index: 100;
+transition: opacity 0.5s;
+}
+
+.waiting.hidden { opacity: 0; pointer-events: none; }
+
+.waiting-logo {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 48px;
+letter-spacing: 8px;
+color: var(–accent);
+text-shadow: 0 0 40px rgba(0,229,255,0.4);
+}
+
+.waiting-sub {
+font-size: 11px;
+letter-spacing: 4px;
+color: var(–dim);
+animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.2; }
+}
+
+.waiting-spinner {
+width: 40px; height: 40px;
+border: 2px solid var(–border);
+border-top-color: var(–accent);
+border-radius: 50%;
+animation: spin 1s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* CELL ANIMATIONS */
+.cell { animation: cellIn 0.4s ease both; }
+
+@keyframes cellIn {
+from { opacity: 0; transform: translateY(4px); }
+to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+</head>
+<body>
+
+<div class="flash-overlay" id="flashOverlay"></div>
+
+<div class="waiting" id="waitingScreen">
+  <div class="waiting-logo">SYNC DISPLAY</div>
+  <div class="waiting-spinner"></div>
+  <div class="waiting-sub">WAITING FOR CONTROLLER...</div>
+</div>
+
+<header>
+  <div class="logo">SYNC<span>DISPLAY</span></div>
+  <div class="sync-indicator">
+    <div class="sync-dot" id="syncDot"></div>
+    <span id="syncText">WAITING FOR SIGNAL</span>
+    <span id="lastSync" style="color: var(--dim); font-size: 10px;"></span>
+  </div>
+  <div class="role-badge">SLAVE / DISPLAY</div>
+</header>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+</div>
+
+<div class="dashboard">
+
+  <!-- HERO: Title -->
+
+  <div class="cell cell-hero">
+    <div class="step-badge" id="stepBadge">STEP 01 OF 08</div>
+    <div class="slide-title" id="slideTitle">WAITING FOR SYNC</div>
+    <div class="slide-sub" id="slideSub">Connect the controller window to begin</div>
+  </div>
+
+  <!-- Step Number -->
+
+  <div class="cell cell-stepnum">
+    <div class="big-num-label">CURRENT STEP</div>
+    <div class="big-num" id="bigNum">—</div>
+    <div class="big-num-label" id="bigNumSub">PENDING</div>
+  </div>
+
+  <!-- Metric 1 -->
+
+  <div class="cell cell-metric">
+    <div class="cell-label">COMPLETION</div>
+    <div class="metric-label">PROGRESS</div>
+    <div class="metric-value" id="metric1">0%</div>
+    <div class="metric-change pos" id="metric1ch">● TRACKING CONTROLLER</div>
+    <div class="mini-chart" id="chart1"></div>
+  </div>
+
+  <!-- Metric 2 -->
+
+  <div class="cell cell-metric">
+    <div class="cell-label">STEPS DONE</div>
+    <div class="metric-label">COMPLETED</div>
+    <div class="metric-value" id="metric2">0</div>
+    <div class="metric-change" id="metric2ch">● REMAINING: —</div>
+    <div class="mini-chart" id="chart2"></div>
+  </div>
+
+  <!-- Metric 3 -->
+
+  <div class="cell cell-metric">
+    <div class="cell-label">TIME SLOT</div>
+    <div class="metric-label">SCHEDULED</div>
+    <div class="metric-value" id="metric3" style="font-size:32px">—:—</div>
+    <div class="metric-change pos" id="metric3ch">● ON SCHEDULE</div>
+  </div>
+
+  <!-- Notes -->
+
+  <div class="cell cell-notes">
+    <div class="cell-label">STEP NOTES</div>
+    <div class="note-list" id="noteList"></div>
+  </div>
+
+  <!-- Mini Timeline -->
+
+  <div class="cell cell-timeline">
+    <div class="cell-label">FULL TIMELINE</div>
+    <div class="mini-timeline" id="miniTimeline"></div>
+  </div>
+
+</div>
+
+<script>
+  const WINDOW_ID = 'DISPLAY-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+  const channel = new BroadcastChannel('sync-ctrl');
+
+  let steps = [];
+  let currentStep = 0;
+
+  // Step-specific notes
+  const NOTES = [
+    ['Welcome attendees', 'Review agenda', 'Set expectations', 'Housekeeping'],
+    ['YoY revenue growth', 'Market share data', 'Competitor landscape', 'Key trends'],
+    ['ARR / MRR metrics', 'Churn analysis', 'NPS scores', 'Pipeline health'],
+    ['APAC performance', 'EMEA highlights', 'AMER results', 'Growth regions'],
+    ['H2 feature list', 'Engineering capacity', 'Customer requests', 'Priority matrix'],
+    ['Top 5 risks rated', 'Owner assignments', 'Timeline impacts', 'Contingency plans'],
+    ['Live questions', 'Poll results', 'Action capture', 'Follow-up items'],
+    ['Summary recap', 'Owner assignments', 'Next meeting date', 'Docs shared'],
+  ];
+
+  // ── CHANNEL ────────────────────────────────────────────────────────────
+  channel.onmessage = (e) => {
+    const { type, step, total, steps: s } = e.data;
+
+    if (type === 'CONTROLLER_ONLINE') {
+      channel.postMessage({ type: 'PING', from: WINDOW_ID });
+    }
+
+    if (type === 'STATE' || type === 'STEP_CHANGE') {
+      if (s) steps = s;
+      currentStep = step ?? currentStep;
+      hideWaiting();
+      flashTransition();
+      render();
+    }
+
+    if (type === 'HEARTBEAT') {
+      channel.postMessage({ type: 'PONG', from: WINDOW_ID });
+    }
+  };
+
+  // Announce self to controller
+  channel.postMessage({ type: 'PING', from: WINDOW_ID });
+
+  // ── FLASH ─────────────────────────────────────────────────────────────
+  function flashTransition() {
+    const overlay = document.getElementById('flashOverlay');
+    overlay.classList.add('active');
+    setTimeout(() => overlay.classList.remove('active'), 150);
+
+    const dot = document.getElementById('syncDot');
+    dot.classList.add('synced');
+    setTimeout(() => dot.classList.remove('synced'), 600);
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────
+  function render() {
+    if (!steps.length) return;
+
+    const s = steps[currentStep];
+    const total = steps.length;
+    const pct = Math.round((currentStep / (total - 1)) * 100) || 0;
+
+    // Header
+    document.getElementById('stepBadge').textContent =
+      `STEP ${String(currentStep + 1).padStart(2,'0')} OF ${String(total).padStart(2,'0')}`;
+    document.getElementById('slideTitle').textContent = s.title;
+    document.getElementById('slideSub').textContent = s.sub;
+
+    // Big number
+    document.getElementById('bigNum').textContent = String(currentStep + 1).padStart(2,'0');
+    document.getElementById('bigNumSub').textContent = s.time;
+
+    // Progress
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    // Metrics
+    document.getElementById('metric1').textContent = pct + '%';
+    document.getElementById('metric1').className = 'metric-value ' + (pct > 50 ? 'up' : '');
+
+    document.getElementById('metric2').textContent = String(currentStep).padStart(2,'0');
+    document.getElementById('metric2ch').textContent = `● REMAINING: ${total - currentStep - 1}`;
+    document.getElementById('metric2ch').className = 'metric-change ' + (currentStep < total - 1 ? 'pos' : 'neg');
+
+    document.getElementById('metric3').textContent = s.time;
+
+    // Chart 1 (progress bar style)
+    const c1 = document.getElementById('chart1');
+    c1.innerHTML = steps.map((_, i) => {
+      const h = 20 + Math.round((i / (total-1)) * 60);
+      const cls = i < currentStep ? 'high' : i === currentStep ? 'active-bar' : '';
+      return `<div class="bar ${cls}" style="height: ${h}%"></div>`;
+    }).join('');
+
+    // Chart 2 (activity)
+    const c2 = document.getElementById('chart2');
+    const vals = steps.map((_, i) => 20 + Math.abs(Math.sin(i * 1.3) * 70));
+    c2.innerHTML = vals.map((v, i) => {
+      const cls = i === currentStep ? 'active-bar' : i < currentStep ? 'high' : '';
+      return `<div class="bar ${cls}" style="height: ${v}%"></div>`;
+    }).join('');
+
+    // Notes
+    const notes = NOTES[currentStep] || [];
+    document.getElementById('noteList').innerHTML = notes.map((n, i) => `
+      <div class="note-item ${i === 0 ? 'highlight' : ''}">
+        <div class="note-dot"></div>
+        <span>${n}</span>
+      </div>
+    `).join('');
+
+    // Mini timeline
+    document.getElementById('miniTimeline').innerHTML = steps.map((st, i) => `
+      <div class="mini-step ${i < currentStep ? 'done' : i === currentStep ? 'current' : ''}">
+        ${String(i+1).padStart(2,'0')} ${st.title}
+      </div>
+    `).join('');
+
+    // Sync status
+    const now = new Date();
+    document.getElementById('syncText').textContent = 'SYNCED';
+    document.getElementById('lastSync').textContent =
+      `LAST SYNC: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  }
+
+  function hideWaiting() {
+    document.getElementById('waitingScreen').classList.add('hidden');
+  }
+
+  // Page title
+  document.title = `DISPLAY [${WINDOW_ID}]`;
+
+  // Disconnect notice
+  window.addEventListener('beforeunload', () => {
+    channel.postMessage({ type: 'DISCONNECT', from: WINDOW_ID });
+  });
+</script>
+
+</body>
+</html>
