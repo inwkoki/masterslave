@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ SYNC CONTROLLER</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+:root {
+–bg: #080c10;
+–panel: #0d1117;
+–border: #1a2535;
+–accent: #00e5ff;
+–accent2: #ff3d71;
+–accent3: #ffe600;
+–text: #c8d6e5;
+–dim: #3d5166;
+–green: #00ff88;
+}
+
+- { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+background: var(–bg);
+color: var(–text);
+font-family: ‘Share Tech Mono’, monospace;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+overflow: hidden;
+}
+
+/* Scanline overlay */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background: repeating-linear-gradient(
+0deg,
+transparent,
+transparent 2px,
+rgba(0,229,255,0.015) 2px,
+rgba(0,229,255,0.015) 4px
+);
+pointer-events: none;
+z-index: 999;
+}
+
+header {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 16px 28px;
+border-bottom: 1px solid var(–border);
+background: var(–panel);
+}
+
+.logo {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 28px;
+letter-spacing: 4px;
+color: var(–accent);
+text-shadow: 0 0 20px rgba(0,229,255,0.5);
+}
+
+.logo span { color: var(–accent2); }
+
+.status-bar {
+display: flex;
+align-items: center;
+gap: 20px;
+font-size: 11px;
+color: var(–dim);
+}
+
+.status-dot {
+width: 8px; height: 8px;
+border-radius: 50%;
+background: var(–accent2);
+box-shadow: 0 0 8px var(–accent2);
+animation: pulse 2s infinite;
+}
+.status-dot.connected { background: var(–green); box-shadow: 0 0 8px var(–green); }
+
+@keyframes pulse {
+0%, 100% { opacity: 1; }
+50% { opacity: 0.3; }
+}
+
+.role-badge {
+padding: 4px 12px;
+border: 1px solid var(–accent);
+color: var(–accent);
+font-size: 10px;
+letter-spacing: 3px;
+text-transform: uppercase;
+}
+
+/* MAIN LAYOUT */
+.main {
+flex: 1;
+display: grid;
+grid-template-rows: auto 1fr auto;
+gap: 0;
+padding: 24px;
+gap: 20px;
+}
+
+/* STEP COUNTER */
+.step-display {
+text-align: center;
+padding: 20px;
+background: var(–panel);
+border: 1px solid var(–border);
+position: relative;
+overflow: hidden;
+}
+
+.step-display::before {
+content: ‘’;
+position: absolute;
+left: 0; top: 0; bottom: 0;
+width: 3px;
+background: var(–accent);
+box-shadow: 0 0 12px var(–accent);
+}
+
+.step-label {
+font-size: 10px;
+letter-spacing: 4px;
+color: var(–dim);
+margin-bottom: 8px;
+}
+
+.step-number {
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 80px;
+line-height: 1;
+color: var(–accent);
+text-shadow: 0 0 40px rgba(0,229,255,0.4);
+transition: all 0.15s ease;
+}
+
+.step-number.flash {
+color: var(–accent3);
+text-shadow: 0 0 60px rgba(255,230,0,0.8);
+transform: scale(1.05);
+}
+
+.step-total { color: var(–dim); font-size: 14px; margin-top: 4px; }
+
+/* TIMELINE */
+.timeline-section {
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 20px;
+overflow-y: auto;
+}
+
+.section-title {
+font-size: 10px;
+letter-spacing: 4px;
+color: var(–dim);
+margin-bottom: 16px;
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.section-title::after {
+content: ‘’;
+flex: 1;
+height: 1px;
+background: var(–border);
+}
+
+.timeline {
+display: flex;
+flex-direction: column;
+gap: 2px;
+}
+
+.timeline-item {
+display: grid;
+grid-template-columns: 40px 1fr auto;
+align-items: center;
+gap: 14px;
+padding: 10px 14px;
+border: 1px solid transparent;
+cursor: pointer;
+transition: all 0.2s ease;
+position: relative;
+}
+
+.timeline-item:hover {
+border-color: var(–border);
+background: rgba(0,229,255,0.03);
+}
+
+.timeline-item.active {
+border-color: var(–accent);
+background: rgba(0,229,255,0.07);
+}
+
+.timeline-item.active::before {
+content: ‘’;
+position: absolute;
+left: 0; top: 0; bottom: 0;
+width: 2px;
+background: var(–accent);
+box-shadow: 0 0 8px var(–accent);
+}
+
+.timeline-item.past { opacity: 0.45; }
+
+.item-num {
+font-size: 11px;
+color: var(–dim);
+text-align: right;
+}
+
+.timeline-item.active .item-num { color: var(–accent); }
+
+.item-content {}
+.item-title { font-size: 13px; color: var(–text); margin-bottom: 2px; }
+.item-sub { font-size: 10px; color: var(–dim); }
+.timeline-item.active .item-title { color: var(–accent); }
+
+.item-time {
+font-size: 10px;
+color: var(–dim);
+white-space: nowrap;
+}
+
+/* CONTROLS */
+.controls {
+display: grid;
+grid-template-columns: 1fr 2fr 1fr;
+gap: 12px;
+align-items: center;
+}
+
+.btn {
+padding: 16px 24px;
+border: 1px solid var(–border);
+background: var(–panel);
+color: var(–text);
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 12px;
+letter-spacing: 2px;
+cursor: pointer;
+transition: all 0.15s ease;
+text-transform: uppercase;
+display: flex;
+align-items: center;
+justify-content: center;
+gap: 10px;
+}
+
+.btn:hover {
+border-color: var(–accent);
+color: var(–accent);
+box-shadow: 0 0 12px rgba(0,229,255,0.15);
+}
+
+.btn:active { transform: scale(0.97); }
+
+.btn-prev { border-left: 3px solid var(–accent2); }
+.btn-next { border-right: 3px solid var(–accent); }
+
+.btn-center {
+display: flex;
+flex-direction: column;
+align-items: center;
+gap: 8px;
+}
+
+.btn-broadcast {
+width: 100%;
+padding: 18px;
+border: 1px solid var(–green);
+background: rgba(0,255,136,0.05);
+color: var(–green);
+font-family: ‘Bebas Neue’, sans-serif;
+font-size: 18px;
+letter-spacing: 4px;
+cursor: pointer;
+transition: all 0.15s ease;
+text-transform: uppercase;
+}
+
+.btn-broadcast:hover {
+background: rgba(0,255,136,0.12);
+box-shadow: 0 0 20px rgba(0,255,136,0.2);
+}
+
+/* BROADCAST LOG */
+.log-panel {
+background: var(–panel);
+border: 1px solid var(–border);
+padding: 14px;
+font-size: 10px;
+color: var(–dim);
+height: 80px;
+overflow-y: auto;
+display: flex;
+flex-direction: column-reverse;
+gap: 3px;
+}
+
+.log-entry { display: flex; gap: 10px; }
+.log-time { color: var(–accent); opacity: 0.6; white-space: nowrap; }
+.log-msg { }
+.log-msg.sent { color: var(–green); }
+.log-msg.recv { color: var(–accent3); }
+
+/* CONNECTED WINDOWS */
+.windows-panel {
+display: flex;
+gap: 8px;
+flex-wrap: wrap;
+}
+
+.window-tag {
+padding: 4px 12px;
+border: 1px solid var(–border);
+font-size: 10px;
+color: var(–dim);
+display: flex;
+align-items: center;
+gap: 6px;
+}
+
+.window-tag .dot {
+width: 6px; height: 6px;
+border-radius: 50%;
+background: var(–green);
+box-shadow: 0 0 6px var(–green);
+}
+
+/* OPEN DISPLAY BTN */
+.open-display {
+padding: 8px 16px;
+border: 1px solid var(–accent3);
+background: rgba(255,230,0,0.05);
+color: var(–accent3);
+font-family: ‘Share Tech Mono’, monospace;
+font-size: 11px;
+letter-spacing: 2px;
+cursor: pointer;
+transition: all 0.2s;
+}
+.open-display:hover { background: rgba(255,230,0,0.1); }
+
+/* Progress bar */
+.progress-bar {
+height: 2px;
+background: var(–border);
+position: relative;
+overflow: hidden;
+}
+.progress-fill {
+height: 100%;
+background: var(–accent);
+box-shadow: 0 0 8px var(–accent);
+transition: width 0.3s ease;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(–bg); }
+::-webkit-scrollbar-thumb { background: var(–border); }
+</style>
+
+</head>
+<body>
+
+<header>
+  <div class="logo">SYNC<span>CTRL</span></div>
+  <div class="status-bar">
+    <div class="status-dot connected" id="statusDot"></div>
+    <span id="statusText">BROADCASTING</span>
+    <div id="windowsList" class="windows-panel"></div>
+    <button class="open-display" onclick="openDisplay()">+ OPEN DISPLAY WINDOW</button>
+  </div>
+  <div class="role-badge">MASTER / CONTROLLER</div>
+</header>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+</div>
+
+<div class="main">
+
+  <div class="step-display">
+    <div class="step-label">CURRENT SLIDE / STEP</div>
+    <div class="step-number" id="stepNumber">01</div>
+    <div class="step-total" id="stepTotal">OF 08 STEPS</div>
+  </div>
+
+  <div class="timeline-section">
+    <div class="section-title">TIMELINE</div>
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div>
+    <div class="controls">
+      <button class="btn btn-prev" onclick="navigate(-1)">
+        ← PREV
+      </button>
+      <div class="btn-center">
+        <button class="btn-broadcast" onclick="broadcastCurrent()">
+          ⚡ SYNC ALL WINDOWS
+        </button>
+      </div>
+      <button class="btn btn-next" onclick="navigate(1)">
+        NEXT →
+      </button>
+    </div>
+
+```
+<div style="margin-top: 12px;">
+  <div class="section-title">BROADCAST LOG</div>
+  <div class="log-panel" id="logPanel"></div>
+</div>
+```
+
+  </div>
+
+</div>
+
+<script>
+  // ── DATA ──────────────────────────────────────────────────────────────────
+  const STEPS = [
+    { title: 'INTRODUCTION',       sub: 'Opening remarks & agenda',       time: '09:00' },
+    { title: 'MARKET OVERVIEW',    sub: 'Q1 performance summary',          time: '09:15' },
+    { title: 'KPI DASHBOARD',      sub: 'Key metrics deep dive',           time: '09:30' },
+    { title: 'REGIONAL BREAKDOWN', sub: 'APAC / EMEA / AMER analysis',     time: '09:50' },
+    { title: 'PRODUCT ROADMAP',    sub: 'H2 2026 feature releases',        time: '10:10' },
+    { title: 'RISK ASSESSMENT',    sub: 'Blockers & mitigation strategies', time: '10:30' },
+    { title: 'Q&A SESSION',        sub: 'Open floor discussion',           time: '10:50' },
+    { title: 'CLOSING REMARKS',    sub: 'Action items & next steps',       time: '11:00' },
+  ];
+
+  let currentStep = 0;
+  let connectedWindows = new Set();
+
+  // ── BROADCAST CHANNEL ──────────────────────────────────────────────────
+  const channel = new BroadcastChannel('sync-ctrl');
+
+  channel.onmessage = (e) => {
+    const { type, from, step } = e.data;
+
+    if (type === 'PING') {
+      connectedWindows.add(from);
+      updateWindowList();
+      channel.postMessage({ type: 'STATE', step: currentStep, total: STEPS.length, steps: STEPS });
+      addLog(`Window "${from}" connected`, 'recv');
+    }
+
+    if (type === 'STEP_CHANGE') {
+      // A display window also sent a step change (e.g. if they had a button)
+      currentStep = step;
+      render();
+      addLog(`Received step ${step + 1} from "${from}"`, 'recv');
+    }
+
+    if (type === 'PONG') {
+      connectedWindows.add(from);
+      updateWindowList();
+    }
+
+    if (type === 'DISCONNECT') {
+      connectedWindows.delete(from);
+      updateWindowList();
+      addLog(`Window "${from}" disconnected`, 'recv');
+    }
+  };
+
+  // ── ANNOUNCE SELF ──────────────────────────────────────────────────────
+  channel.postMessage({ type: 'CONTROLLER_ONLINE' });
+  addLog('Controller online — broadcasting on channel sync-ctrl', 'sent');
+
+  // ── NAVIGATION ─────────────────────────────────────────────────────────
+  function navigate(dir) {
+    const next = currentStep + dir;
+    if (next < 0 || next >= STEPS.length) return;
+    currentStep = next;
+    render();
+    broadcast();
+  }
+
+  function goToStep(i) {
+    currentStep = i;
+    render();
+    broadcast();
+  }
+
+  function broadcastCurrent() {
+    broadcast();
+    addLog(`Manual sync: pushed step ${currentStep + 1} to all windows`, 'sent');
+  }
+
+  function broadcast() {
+    channel.postMessage({
+      type: 'STEP_CHANGE',
+      step: currentStep,
+      total: STEPS.length,
+      steps: STEPS,
+      from: 'CONTROLLER',
+      ts: Date.now()
+    });
+    addLog(`→ Broadcast step ${currentStep + 1}: ${STEPS[currentStep].title}`, 'sent');
+  }
+
+  // ── RENDER ─────────────────────────────────────────────────────────────
+  function render() {
+    const numEl = document.getElementById('stepNumber');
+    numEl.classList.add('flash');
+    setTimeout(() => numEl.classList.remove('flash'), 200);
+    numEl.textContent = String(currentStep + 1).padStart(2, '0');
+    document.getElementById('stepTotal').textContent = `OF ${String(STEPS.length).padStart(2, '0')} STEPS`;
+
+    const pct = ((currentStep) / (STEPS.length - 1)) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+
+    renderTimeline();
+  }
+
+  function renderTimeline() {
+    const tl = document.getElementById('timeline');
+    tl.innerHTML = STEPS.map((s, i) => `
+      <div class="timeline-item ${i === currentStep ? 'active' : i < currentStep ? 'past' : ''}"
+           onclick="goToStep(${i})">
+        <div class="item-num">${String(i + 1).padStart(2, '0')}</div>
+        <div class="item-content">
+          <div class="item-title">${s.title}</div>
+          <div class="item-sub">${s.sub}</div>
+        </div>
+        <div class="item-time">${s.time}</div>
+      </div>
+    `).join('');
+
+    // Scroll active item into view
+    const active = tl.querySelector('.active');
+    if (active) active.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function updateWindowList() {
+    const el = document.getElementById('windowsList');
+    el.innerHTML = [...connectedWindows].map(w => `
+      <div class="window-tag"><div class="dot"></div>${w}</div>
+    `).join('');
+  }
+
+  function addLog(msg, type = '') {
+    const panel = document.getElementById('logPanel');
+    const now = new Date();
+    const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const entry = document.createElement('div');
+    entry.className = 'log-entry';
+    entry.innerHTML = `<span class="log-time">${ts}</span><span class="log-msg ${type}">${msg}</span>`;
+    panel.prepend(entry);
+    while (panel.children.length > 50) panel.removeChild(panel.lastChild);
+  }
+
+  function openDisplay() {
+    window.open('display.html', '_blank', 'width=1280,height=800');
+  }
+
+  // ── KEYBOARD SHORTCUTS ──────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault();
+      navigate(1);
+    }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      navigate(-1);
+    }
+  });
+
+  // ── INIT ───────────────────────────────────────────────────────────────
+  render();
+
+  // Heartbeat to detect dead windows
+  setInterval(() => {
+    channel.postMessage({ type: 'HEARTBEAT', ts: Date.now() });
+  }, 5000);
+</script>
+
+</body>
+</html>
